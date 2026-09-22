@@ -40,6 +40,14 @@ class ComponentTests: XCTestCase {
         let component = TestComponent()
         XCTAssert(component.optionalShare === component.expectedOptionalShare)
     }
+
+    func test_shared_protocolType_verifySingleInstance() {
+        let component = TestComponent()
+        let first = component.protocolShare
+        let second = component.protocolShare
+        XCTAssertTrue((first as AnyObject) === (second as AnyObject))
+        XCTAssertEqual(component.protocolShareFactoryCallCount, 1)
+    }
 }
 
 class TestComponent: BootstrapComponent {
@@ -61,6 +69,17 @@ class TestComponent: BootstrapComponent {
     fileprivate var optionalShare: ClassProtocol? {
         return shared { self.expectedOptionalShare }
     }
+
+    fileprivate var protocolShareFactoryCallCount = 0
+
+    // Two statements in the closure, so `shared`'s `T` is `ValueProtocol`
+    // rather than `ValueProtocolImpl`.
+    fileprivate var protocolShare: ValueProtocol {
+        return shared {
+            self.protocolShareFactoryCallCount += 1
+            return ValueProtocolImpl()
+        }
+    }
 }
 
 private protocol ClassProtocol: AnyObject {
@@ -68,5 +87,13 @@ private protocol ClassProtocol: AnyObject {
 }
 
 private class ClassProtocolImpl: ClassProtocol {
+
+}
+
+private protocol ValueProtocol {
+
+}
+
+private class ValueProtocolImpl: ValueProtocol {
 
 }

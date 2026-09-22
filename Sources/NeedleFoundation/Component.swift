@@ -139,16 +139,15 @@ open class Component<DependencyType>: Scope {
             sharedInstanceLock.unlock()
         }
 
-        // Additional nil coalescing is needed to mitigate a Swift bug appearing
-        // in Xcode 10. see https://bugs.swift.org/browse/SR-8704. Without this
-        // measure, calling `shared` from a function that returns an optional type
-        // will always pass the check below and return nil if the instance is not
-        // initialized.
-        if let instance = (sharedInstances[__function] as? T?) ?? nil {
-            return instance
+        // Cast to the box class rather than to `T`: when `T` is a protocol,
+        // `as? T` has to look up the conformance of the stored instance, which
+        // is very slow until the runtime's conformance cache is warm. See
+        // `SharedInstance`.
+        if let box = sharedInstances[__function] as? SharedInstance<T> {
+            return box.value
         }
         let instance = factory()
-        sharedInstances[__function] = instance
+        sharedInstances[__function] = SharedInstance(instance)
 
         return instance
     }
@@ -173,7 +172,7 @@ open class Component<DependencyType>: Scope {
     // MARK: - Private
 
     private let sharedInstanceLock = NSRecursiveLock()
-    private var sharedInstances = [String: Any]()
+    private var sharedInstances = [String: AnyObject]()
     private lazy var name: String = _typeName(type(of: self), qualified: false)
 
     // TODO: Replace this with an `open` method, once Swift supports extension
@@ -244,16 +243,15 @@ open class Component<DependencyType>: Scope {
             sharedInstanceLock.unlock()
         }
 
-        // Additional nil coalescing is needed to mitigate a Swift bug appearing
-        // in Xcode 10. see https://bugs.swift.org/browse/SR-8704. Without this
-        // measure, calling `shared` from a function that returns an optional type
-        // will always pass the check below and return nil if the instance is not
-        // initialized.
-        if let instance = (sharedInstances[__function] as? T?) ?? nil {
-            return instance
+        // Cast to the box class rather than to `T`: when `T` is a protocol,
+        // `as? T` has to look up the conformance of the stored instance, which
+        // is very slow until the runtime's conformance cache is warm. See
+        // `SharedInstance`.
+        if let box = sharedInstances[__function] as? SharedInstance<T> {
+            return box.value
         }
         let instance = factory()
-        sharedInstances[__function] = instance
+        sharedInstances[__function] = SharedInstance(instance)
 
         return instance
     }
@@ -265,7 +263,7 @@ open class Component<DependencyType>: Scope {
     // MARK: - Private
 
     private let sharedInstanceLock = NSRecursiveLock()
-    private var sharedInstances = [String: Any]()
+    private var sharedInstances = [String: AnyObject]()
     private lazy var name: String = _typeName(type(of: self), qualified: false)
 
     // TODO: Replace this with an `open` method, once Swift supports extension

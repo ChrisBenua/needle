@@ -18,17 +18,23 @@ NEEDLE_SOURCE=fork swift run -c release --scratch-path .build-fork BenchNeedle
 Apple M2 Max, macOS 26 (Darwin 25.5), Swift 6.3.2, release build, best of 5 fresh
 processes per phase:
 
-| phase | upstream 0.25.1 | this fork | |
+| phase | original Needle (uber/needle 0.25.1) | this fork | |
 |---|---|---|---|
-| pass #1 (construct) | 3.95 µs | 3.67 µs | — |
-| pass #2 (hit, cold cache) | 305.69 µs | 0.27 µs | **1138× faster** |
-| pass #3 (hit, warm cache) | 0.51 µs | 0.24 µs | 2.1× faster |
+| pass #1 (construct) | 3.95 µs/call — 0.0395 s | 3.67 µs/call — 0.0367 s | — |
+| pass #2 (hit, cold cache) | **305.69 µs/call — 3.06 s** | **0.27 µs/call — 0.0027 s** | **1138× faster** |
+| pass #3 (hit, warm cache) | 0.51 µs/call — 0.0051 s | 0.24 µs/call — 0.0024 s | 2.1× faster |
 
-Totals for the whole 10 000-property pass: upstream **3.06 s** on pass #2, the
-fork **2.7 ms**.
+Each `µs/call` figure is the phase total divided by the 10 000 properties, so the
+seconds column is what one pass over the whole component costs. The raw output
+`run.sh` produced for this table:
+
+```
+totals: upstream #1 0.0395s  #2 3.0569s  #3 0.0051s
+        fork     #1 0.0367s  #2 0.0027s  #3 0.0024s
+```
 
 **Pass #2 is the number this benchmark exists for.** It is 10 000 cache hits,
-measured in a freshly launched process. Upstream reads the cache back with
+measured in a freshly launched process. The original Needle reads the cache back with
 `sharedInstances[__function] as? T?`; with `T` a protocol, the Swift runtime has
 to produce a witness table for the stored value, and until its conformance cache
 is warm that means scanning the conformance records of a binary containing 10 000
